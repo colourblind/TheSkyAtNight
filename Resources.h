@@ -7,5 +7,6 @@
 
 #define RES_STAR_TEXTURE0	CINDER_RESOURCE(resources/, star0.png, 128, GLSL)
 #define RES_CLOUD_TEXTURE0	CINDER_RESOURCE(resources/, cloud0.png, 129, GLSL)
+#define RES_STAR_TEXTURE1	CINDER_RESOURCE(resources/, star1.png, 130, GLSL)
 
 #endif // THESKYATNIGHT_RESOURCES_H
