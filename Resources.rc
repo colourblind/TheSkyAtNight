@@ -1,0 +1,4 @@
+#include "Resources.h"
+
+RES_STAR_TEXTURE0
+RES_CLOUD_TEXTURE0
