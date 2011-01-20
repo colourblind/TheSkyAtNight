@@ -196,7 +196,8 @@ void TheSkyAtNight::RenderNebulae()
             float a = Rand::randFloat(0, 1);
 
             gl::color(ColorA(tint_.r + r, tint_.g + g, tint_.b + b, a));
-            gl::drawBillboard(pos + offset, scale, rotate, right, up);
+            DrawBillboard(pos + offset, Vec2f(scaleX, scaleY), &camera_); // TODO: rotate
+            // gl::drawBillboard(pos + offset, scale, rotate, right, up);
         }
     }
 }
@@ -218,8 +219,6 @@ void TheSkyAtNight::RenderClouds()
         // float rotation = Rand::randFloat(0, 360);
         gl::color(tint_ * 0.25f);
         DrawBillboard(Vec3f(x, y, z), Vec2f(size, size), &camera_);
-//        gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), 0, right, up);
-//        gl::drawBillboard(Vec3f(x, y, z), Vec2f(1, 1), 0, right, up);
     }
 }
 
@@ -236,7 +235,8 @@ void TheSkyAtNight::DrawStar(float size)
     camera_.getBillboardVectors(&right, &up);
 
     gl::color(Color(r, g, b));
-    gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), 0, right, up);
+    DrawBillboard(Vec3f(x, y, z), Vec2f(size, size), &camera_);
+    // gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), 0, right, up);
 }
 
 void TheSkyAtNight::DrawBillboard(Vec3f objectPos, Vec2f scale, Camera *camera)
