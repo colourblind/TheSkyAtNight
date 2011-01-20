@@ -17,6 +17,7 @@ using namespace cinder::app;
 class TheSkyAtNight : public AppBasic
 {
 public:
+    virtual void prepareSettings(Settings *settings);
     virtual void setup();
     virtual void draw();
 
@@ -26,6 +27,7 @@ private:
     void RenderClouds();
 
     void DrawStar(float size);
+    void DrawBillboard(Vec3f objectPos, Vec2f size, Camera *camera);
 
     gl::Texture smallStarTexture_;
     gl::Texture mediumStarTexture_;
@@ -33,16 +35,28 @@ private:
     gl::Texture hugeStarTexture_;
     gl::Texture cloudTexture_;
     Color tint_;
-    bool done_;
+    CameraPersp camera_;
+    int seed_;
+    int frame_;
 };
+
+void TheSkyAtNight::prepareSettings(Settings *settings)
+{
+    settings->setWindowSize(512, 512);
+}
 
 void TheSkyAtNight::setup()
 {
     vector<string> args = getArgs();
     if (args.size() > 1)
-        Rand::randSeed(atoi(args[1].c_str()));
+        seed_ = atoi(args[1].c_str());
     else
+    {
         Rand::randomize();
+        seed_ = Rand::randInt(65536);
+    }
+
+    frame_ = 0;
 
     gl::disableDepthRead();
     gl::disableDepthWrite();
@@ -59,54 +73,68 @@ void TheSkyAtNight::setup()
     hugeStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE1)), format);
     cloudTexture_ = gl::Texture(loadImage(loadResource(RES_CLOUD_TEXTURE0)), format);
 
-    done_ = false;
+    Rand::randSeed(seed_);
+
+    int r = Rand::randInt(0, 2);
+    int g = Rand::randInt(0, 2);
+    int b = Rand::randInt(0, 2);
+    tint_ = ColorA(r, g, b);
+
+    camera_ = CameraPersp(getWindowWidth(), getWindowHeight(), 90, 0.5f, 10);
+    camera_.setWorldUp(Vec3f(0, -1, 0));
 }
 
 void TheSkyAtNight::draw()
 {
-    if (!done_)
+    if (frame_ < 6)
     {
-        int r = Rand::randInt(0, 2);
-        int g = Rand::randInt(0, 2);
-        int b = Rand::randInt(0, 2);
-        tint_ = ColorA(r, g, b);
+        Rand::randSeed(seed_);
 
-        // gl::clear(Color(r * tintStrength * 0.1f, g * tintStrength * 0.1f, b * tintStrength * 0.1f));
+        string filename;
+        switch(frame_)
+        {
+        case 0:
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, -1));
+            filename = "f.png";
+            break;
+        case 1:
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, 1));
+            filename = "b.png";
+            break;
+        case 2:
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(-1, 0, 0));
+            filename = "l.png";
+            break;
+        case 3:
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(1, 0, 0));
+            filename = "r.png";
+            break;
+        case 4:
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 1, 0));
+            filename = "u.png";
+            break;
+        case 5:
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, -1, 0));
+            filename = "d.png";
+            break;
+        }
+
         gl::clear();
-
-        CameraPersp camera = CameraPersp(getWindowWidth(), getWindowHeight(), 60, 0.5f, 10);
-        camera.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, -1));
-        gl::setMatrices(camera);
+        gl::setMatrices(camera_);
 
         RenderClouds();
         RenderNebulae();
         RenderStars();
 
-        done_ = true;
+        string fullFilename = getHomeDirectory() + "out\\" + filename;
+        writeImage(fullFilename, copyWindowSurface());
+
+        frame_ ++;
     }
-
-/*
-    // render up
-    camera.lookAt(Vec3f(0, 0, 0), Vec3f(0, 1, 0));
-    writeImage(getHomeDirectory() + "u.png", copyWindowSurface());
-    // render down
-    camera.lookAt(Vec3f(0, 0, 0), Vec3f(0, -1, 0));
-    writeImage(getHomeDirectory() + "d.png", copyWindowSurface());
-    // render left
-    camera.lookAt(Vec3f(0, 0, 0), Vec3f(-1, 0, 0));
-    writeImage(getHomeDirectory() + "l.png", copyWindowSurface());
-    // render right
-    camera.lookAt(Vec3f(0, 0, 0), Vec3f(1, 0, 0));
-    writeImage(getHomeDirectory() + "r.png", copyWindowSurface());
-    // render front
-    camera.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, 1));
-    writeImage(getHomeDirectory() + "f.png", copyWindowSurface());
-    // render back
-    camera.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, -1));
-    //writeImage(getHomeDirectory() + "b.png", copyWindowSurface());
-
-    //quit();
-    */
+    else
+    {
+        quit();
+    }
 }
 
 void TheSkyAtNight::RenderStars()
@@ -133,31 +161,19 @@ void TheSkyAtNight::RenderStars()
         DrawStar(0.3f);
 }
 
-void TheSkyAtNight::DrawStar(float size)
-{
-    float x = Rand::randFloat(-3, 3);
-    float y = Rand::randFloat(-3, 3);
-    float z = Rand::randFloat(-3, 3);
-    float r = Rand::randFloat(0.85f, 1);
-    float g = Rand::randFloat(0.85f, 1);
-    float b = Rand::randFloat(0.85f, 1);
-    gl::color(Color(r, g, b));
-    gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), 0, Vec3f(1, 0, 0), Vec3f(0, 1, 0));
-}
-
 void TheSkyAtNight::RenderNebulae()
 {
-    gl::enableAlphaBlending();
-    gl::enableAdditiveBlending(); // temp
-    int numNebula = Rand::randInt(0, 10);
-    numNebula = 1;
+    Vec3f right, up;
+    camera_.getBillboardVectors(&right, &up);
+
+    gl::enableAdditiveBlending();
+    int numNebula = Rand::randInt(0, 4);
     for (int i = 0; i < numNebula; i ++)
     {
         float x = Rand::randFloat(-3, 3);
         float y = Rand::randFloat(-3, 3);
         float z = Rand::randFloat(-3, 3);
-//        Vec3f pos = Vec3f(x, y, z);
-        Vec3f pos = Vec3f(0, 0, -2);
+        Vec3f pos = Vec3f(x, y, z);
 
         int numClouds = Rand::randInt(10, 50);
         for (int i = 0; i < numClouds; i ++)
@@ -180,13 +196,16 @@ void TheSkyAtNight::RenderNebulae()
             float a = Rand::randFloat(0, 1);
 
             gl::color(ColorA(tint_.r + r, tint_.g + g, tint_.b + b, a));
-            gl::drawBillboard(pos + offset, scale, rotate, Vec3f(1, 0, 0), Vec3f(0, 1, 0));
+            gl::drawBillboard(pos + offset, scale, rotate, right, up);
         }
     }
 }
 
 void TheSkyAtNight::RenderClouds()
 {
+    Vec3f right, up;
+    camera_.getBillboardVectors(&right, &up);
+
     gl::enableAdditiveBlending();
     cloudTexture_.enableAndBind();
     int numClouds = Rand::randInt(3, 15);
@@ -196,10 +215,91 @@ void TheSkyAtNight::RenderClouds()
         float y = Rand::randFloat(-5, 5);
         float z = Rand::randFloat(-5, 5);
         float size = Rand::randFloat(4, 10);
-        float rotation = Rand::randFloat(0, 360);
+        // float rotation = Rand::randFloat(0, 360);
         gl::color(tint_ * 0.25f);
-        gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), rotation, Vec3f(1, 0, 0), Vec3f(0, 1, 0));
+        DrawBillboard(Vec3f(x, y, z), Vec2f(size, size), &camera_);
+//        gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), 0, right, up);
+//        gl::drawBillboard(Vec3f(x, y, z), Vec2f(1, 1), 0, right, up);
     }
+}
+
+void TheSkyAtNight::DrawStar(float size)
+{
+    float x = Rand::randFloat(-3, 3);
+    float y = Rand::randFloat(-3, 3);
+    float z = Rand::randFloat(-3, 3);
+    float r = Rand::randFloat(0.85f, 1);
+    float g = Rand::randFloat(0.85f, 1);
+    float b = Rand::randFloat(0.85f, 1);
+
+    Vec3f right, up;
+    camera_.getBillboardVectors(&right, &up);
+
+    gl::color(Color(r, g, b));
+    gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), 0, right, up);
+}
+
+void TheSkyAtNight::DrawBillboard(Vec3f objectPos, Vec2f scale, Camera *camera)
+{
+    // Yoinked from the SlimDX implementation (thanks Promit and friends!)
+    Matrix44f result;
+    Vec3f difference = objectPos - camera->getEyePoint();
+    Vec3f crossed;
+    Vec3f final;
+
+    float lengthSq = difference.lengthSquared();
+    if (lengthSq < 0.0001f)
+        difference = camera->getViewDirection();
+    else
+        difference *= static_cast<float>(1.0f / math<float>::sqrt(lengthSq));
+
+    crossed = camera->getWorldUp().cross(difference);
+    crossed.normalize();
+    final = difference.cross(crossed);
+
+    result.m[0] = crossed.x;
+    result.m[1] = crossed.y;
+    result.m[2] = crossed.z;
+    result.m[3] = 0;
+
+    result.m[4] = final.x;
+    result.m[5] = final.y;
+    result.m[6] = final.z;
+    result.m[7] = 0;
+    
+    result.m[8] = difference.x;
+    result.m[9] = difference.y;
+    result.m[10] = difference.z;
+    result.m[11] = 0;
+
+    result.m[12] = objectPos.x;
+    result.m[13] = objectPos.y;
+    result.m[14] = objectPos.z;
+    result.m[15] = 1;
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	Vec3f verts[4];
+	glVertexPointer(3, GL_FLOAT, 0, &verts[0].x);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	GLfloat texCoords[8] = { 0, 0, 0, 1, 1, 0, 1, 1 };
+	glTexCoordPointer(2, GL_FLOAT, 0, texCoords);
+
+    gl::pushModelView();
+    gl::multModelView(result);
+
+    Vec2f halfScale = scale * 0.5;
+
+	verts[0] = Vec3f(-halfScale.x, -halfScale.y, 0);
+	verts[1] = Vec3f(-halfScale.x, halfScale.y, 0);
+	verts[2] = Vec3f(halfScale.x, -halfScale.y, 0);
+	verts[3] = Vec3f(halfScale.x, halfScale.y, 0);
+
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    gl::popModelView();
 }
 
 CINDER_APP_BASIC(TheSkyAtNight, RendererGl)
