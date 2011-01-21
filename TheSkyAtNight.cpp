@@ -3,6 +3,7 @@
 #include "cinder/ImageIo.h"
 #include "cinder/Rand.h"
 #include "cinder/Utilities.h"
+#include "cinder/gl/Fbo.h"
 #include "cinder/gl/Texture.h"
 
 #include <string>
@@ -13,6 +14,8 @@
 using namespace std;
 using namespace cinder;
 using namespace cinder::app;
+
+const int TEX_SIZE = 512;
 
 class TheSkyAtNight : public AppBasic
 {
@@ -34,6 +37,8 @@ private:
     gl::Texture largeStarTexture_;
     gl::Texture hugeStarTexture_;
     gl::Texture cloudTexture_;
+    gl::Fbo side_;
+    gl::Fbo final_;
     Color tint_;
     CameraPersp camera_;
     int seed_;
@@ -42,7 +47,7 @@ private:
 
 void TheSkyAtNight::prepareSettings(Settings *settings)
 {
-    settings->setWindowSize(512, 512);
+    settings->setWindowSize(TEX_SIZE, TEX_SIZE);
 }
 
 void TheSkyAtNight::setup()
@@ -60,6 +65,9 @@ void TheSkyAtNight::setup()
 
     gl::disableDepthRead();
     gl::disableDepthWrite();
+
+    final_ = gl::Fbo(TEX_SIZE * 3, TEX_SIZE * 2, false, true, false);
+    side_ = gl::Fbo(TEX_SIZE, TEX_SIZE, false, true, false);
 
     // Load textures
     gl::Texture::Format format;
@@ -80,7 +88,7 @@ void TheSkyAtNight::setup()
     int b = Rand::randInt(0, 2);
     tint_ = ColorA(r, g, b);
 
-    camera_ = CameraPersp(getWindowWidth(), getWindowHeight(), 90, 0.5f, 10);
+    camera_ = CameraPersp(getWindowWidth(), getWindowHeight(), 90, 0.1f, 20);
     camera_.setWorldUp(Vec3f(0, -1, 0));
 }
 
@@ -89,6 +97,7 @@ void TheSkyAtNight::draw()
     if (frame_ < 6)
     {
         Rand::randSeed(seed_);
+        Area destination;
 
         string filename;
         switch(frame_)
@@ -96,28 +105,36 @@ void TheSkyAtNight::draw()
         case 0:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, -1));
             filename = "f.png";
+            destination = Area(0, 0, TEX_SIZE, TEX_SIZE);
             break;
         case 1:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, 1));
             filename = "b.png";
+            destination = Area(TEX_SIZE, 0, TEX_SIZE * 2, TEX_SIZE);
             break;
         case 2:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(-1, 0, 0));
             filename = "l.png";
+            destination = Area(TEX_SIZE * 2, 0, TEX_SIZE * 3, TEX_SIZE);
             break;
         case 3:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(1, 0, 0));
             filename = "r.png";
+            destination = Area(0, TEX_SIZE, TEX_SIZE, TEX_SIZE * 2);
             break;
         case 4:
-            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 1, 0));
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, -1, 0));
             filename = "u.png";
+            destination = Area(TEX_SIZE, TEX_SIZE, TEX_SIZE * 2, TEX_SIZE * 2);
             break;
         case 5:
-            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, -1, 0));
+            camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 1, 0));
             filename = "d.png";
+            destination = Area(TEX_SIZE * 2, TEX_SIZE, TEX_SIZE * 3, TEX_SIZE * 2);
             break;
         }
+
+        side_.bindFramebuffer();
 
         gl::clear();
         gl::setMatrices(camera_);
@@ -126,13 +143,26 @@ void TheSkyAtNight::draw()
         RenderNebulae();
         RenderStars();
 
+        side_.unbindFramebuffer();
+
+        // Rendering to screen and then blitting off doesn't work, stretching the last row 
+        // of the texture across the whole area. Half worked with NV 197.16. Got worse with
+        // 266.58. Leaving it here as it's much more elegant (no faffing with the second FBO)
+        // in case I can get the bastard working in the future. :-|
+        // final_.blitFromScreen(Area(0, 0, TEX_SIZE, TEX_SIZE), destination);
+
+        side_.blitTo(final_, Area(0, 0, TEX_SIZE, TEX_SIZE), destination);
+        side_.blitToScreen(Area(0, 0, TEX_SIZE, TEX_SIZE), Area(0, 0, TEX_SIZE, TEX_SIZE));
+
         string fullFilename = getHomeDirectory() + "out\\" + filename;
-        writeImage(fullFilename, copyWindowSurface());
+        writeImage(fullFilename, side_.getTexture());
 
         frame_ ++;
     }
     else
     {
+        string fullFilename = getHomeDirectory() + "out\\final.png";
+        writeImage(fullFilename, final_.getTexture());
         quit();
     }
 }
