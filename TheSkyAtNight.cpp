@@ -7,6 +7,7 @@
 #include "cinder/gl/Texture.h"
 
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include "Resources.h"
@@ -15,7 +16,7 @@ using namespace std;
 using namespace cinder;
 using namespace cinder::app;
 
-const int TEX_SIZE = 1024;
+const int TEX_SIZE = 512;
 
 class TheSkyAtNight : public AppBasic
 {
@@ -154,15 +155,17 @@ void TheSkyAtNight::draw()
         side_.blitTo(final_, Area(0, 0, TEX_SIZE, TEX_SIZE), destination);
         side_.blitToScreen(Area(0, 0, TEX_SIZE, TEX_SIZE), Area(0, 0, TEX_SIZE, TEX_SIZE));
 
-        string fullFilename = getHomeDirectory() + "out\\" + filename;
-        writeImage(fullFilename, side_.getTexture());
+        stringstream fullFilename;
+        fullFilename << getAppPath() << "out\\" << filename;
+        writeImage(fullFilename.str(), side_.getTexture());
 
         frame_ ++;
     }
     else
     {
-        string fullFilename = getHomeDirectory() + "out\\final.png";
-        writeImage(fullFilename, final_.getTexture());
+        stringstream fullFilename;
+        fullFilename << getAppPath() << "out\\final_" << seed_ << ".png";
+        writeImage(fullFilename.str(), final_.getTexture());
         quit();
     }
 }
