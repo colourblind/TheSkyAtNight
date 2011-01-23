@@ -15,7 +15,7 @@ using namespace std;
 using namespace cinder;
 using namespace cinder::app;
 
-const int TEX_SIZE = 512;
+const int TEX_SIZE = 1024;
 
 class TheSkyAtNight : public AppBasic
 {
@@ -75,8 +75,8 @@ void TheSkyAtNight::setup()
     format.setMinFilter(GL_LINEAR_MIPMAP_NEAREST);
     format.setMagFilter(GL_LINEAR);
     
-    smallStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE0)), format);
-    mediumStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE1)), format);
+    smallStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE2)), format);
+    mediumStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE0)), format);
     largeStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE1)), format);
     hugeStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE1)), format);
     cloudTexture_ = gl::Texture(loadImage(loadResource(RES_CLOUD_TEXTURE0)), format);
@@ -254,19 +254,20 @@ void TheSkyAtNight::RenderClouds()
 
 void TheSkyAtNight::DrawStar(float size)
 {
-    float x = Rand::randFloat(-3, 3);
-    float y = Rand::randFloat(-3, 3);
-    float z = Rand::randFloat(-3, 3);
+    float x = Rand::randFloat(-5, 5);
+    float y = Rand::randFloat(-5, 5);
+    float z = Rand::randFloat(-5, 5);
     float r = Rand::randFloat(0.85f, 1);
     float g = Rand::randFloat(0.85f, 1);
     float b = Rand::randFloat(0.85f, 1);
 
-    Vec3f right, up;
-    camera_.getBillboardVectors(&right, &up);
+    Vec3f position = Vec3f(x, y, z);
+    float distSq = position.lengthSquared();
+    if (distSq < 1)
+        position *= 1.0f / distSq;
 
     gl::color(Color(r, g, b));
-    DrawBillboard(Vec3f(x, y, z), Vec2f(size, size), &camera_);
-    // gl::drawBillboard(Vec3f(x, y, z), Vec2f(size, size), 0, right, up);
+    DrawBillboard(position, Vec2f(size, size), &camera_);
 }
 
 void TheSkyAtNight::DrawBillboard(Vec3f objectPos, Vec2f scale, Camera *camera)
