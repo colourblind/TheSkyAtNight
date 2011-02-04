@@ -1,0 +1,1 @@
+Cinder-based skybox generation . . . IN SPACE
