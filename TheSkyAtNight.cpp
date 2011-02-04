@@ -89,7 +89,7 @@ void TheSkyAtNight::setup()
     int b = Rand::randInt(0, 2);
     tint_ = ColorA(r, g, b);
 
-    camera_ = CameraPersp(getWindowWidth(), getWindowHeight(), 90, 0.1f, 20);
+    camera_ = CameraPersp(TEX_SIZE, TEX_SIZE, 90, 0.1f, 20);
     camera_.setWorldUp(Vec3f(0, -1, 0));
 }
 
@@ -208,6 +208,8 @@ void TheSkyAtNight::RenderNebulae()
         float z = Rand::randFloat(-3, 3);
         Vec3f pos = Vec3f(x, y, z);
 
+        float size = Rand::randFloat(0.5, 4);
+
         int numClouds = Rand::randInt(10, 50);
         for (int i = 0; i < numClouds; i ++)
         {
@@ -217,10 +219,10 @@ void TheSkyAtNight::RenderNebulae()
             x1 = x1 * x1 - 0.5f; // Square the offsets to make them tend towards the centre
             y1 = y1 * y1 - 0.5f;
             z1 = z1 * z1 - 0.5f;
-            Vec3f offset = Vec3f(x1, y1, z1);
-            float scaleX = Rand::randFloat(0.1f, 0.5f);
-            float scaleY = Rand::randFloat(0.1f, 0.5f);
-            Vec2f scale = Vec2f(scaleX, scaleY);
+            Vec3f offset = Vec3f(x1 * size, y1 * size, z1 * size);
+            float scaleX = Rand::randFloat(0.5f, 1);
+            float scaleY = Rand::randFloat(0.5f, 1);
+            Vec2f scale = Vec2f(scaleX * size, scaleY * size);
             float rotate = Rand::randFloat(0, 360);
 
             float r = Rand::randFloat(0, 1);
@@ -230,7 +232,6 @@ void TheSkyAtNight::RenderNebulae()
 
             gl::color(ColorA(tint_.r + r, tint_.g + g, tint_.b + b, a));
             DrawBillboard(pos + offset, Vec2f(scaleX, scaleY), &camera_); // TODO: rotate
-            // gl::drawBillboard(pos + offset, scale, rotate, right, up);
         }
     }
 }
