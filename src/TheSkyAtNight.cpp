@@ -16,8 +16,6 @@ using namespace std;
 using namespace cinder;
 using namespace cinder::app;
 
-const int TEX_SIZE = 1024;
-
 class TheSkyAtNight : public AppBasic
 {
 public:
@@ -43,6 +41,7 @@ private:
     Color tint_;
     CameraPersp camera_;
     int seed_;
+    int textureSize_;
     int frame_;
 };
 
@@ -55,7 +54,12 @@ void TheSkyAtNight::setup()
 {
     vector<string> args = getArgs();
     if (args.size() > 1)
-        seed_ = atoi(args[1].c_str());
+        textureSize_ = atoi(args[1].c_str());
+    else
+        textureSize_ = 512;
+
+    if (args.size() > 2)
+        seed_ = atoi(args[2].c_str());
     else
     {
         Rand::randomize();
@@ -67,8 +71,8 @@ void TheSkyAtNight::setup()
     gl::disableDepthRead();
     gl::disableDepthWrite();
 
-    final_ = gl::Fbo(TEX_SIZE * 3, TEX_SIZE * 2, false, true, false);
-    side_ = gl::Fbo(TEX_SIZE, TEX_SIZE, false, true, false);
+    final_ = gl::Fbo(textureSize_ * 3, textureSize_ * 2, false, true, false);
+    side_ = gl::Fbo(textureSize_, textureSize_, false, true, false);
 
     // Load textures
     gl::Texture::Format format;
@@ -91,7 +95,7 @@ void TheSkyAtNight::setup()
 
     side_.bindFramebuffer();
 
-    camera_ = CameraPersp(TEX_SIZE, TEX_SIZE, 90, 0.1f, 20);
+    camera_ = CameraPersp(textureSize_, textureSize_, 90, 0.1f, 20);
     camera_.setWorldUp(Vec3f(0, -1, 0));
 }
 
@@ -108,44 +112,44 @@ void TheSkyAtNight::draw()
         case 0:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, -1));
             filename = "f.png";
-            destination = Area(0, 0, TEX_SIZE, TEX_SIZE);
+            destination = Area(0, 0, textureSize_, textureSize_);
             break;
         case 1:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 0, 1));
             filename = "b.png";
-            destination = Area(TEX_SIZE, 0, TEX_SIZE * 2, TEX_SIZE);
+            destination = Area(textureSize_, 0, textureSize_ * 2, textureSize_);
             break;
         case 2:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(-1, 0, 0));
             filename = "l.png";
-            destination = Area(TEX_SIZE * 2, 0, TEX_SIZE * 3, TEX_SIZE);
+            destination = Area(textureSize_ * 2, 0, textureSize_ * 3, textureSize_);
             break;
         case 3:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(1, 0, 0));
             filename = "r.png";
-            destination = Area(0, TEX_SIZE, TEX_SIZE, TEX_SIZE * 2);
+            destination = Area(0, textureSize_, textureSize_, textureSize_ * 2);
             break;
         case 4:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, -1, 0));
             filename = "u.png";
-            destination = Area(TEX_SIZE, TEX_SIZE, TEX_SIZE * 2, TEX_SIZE * 2);
+            destination = Area(textureSize_, textureSize_, textureSize_ * 2, textureSize_ * 2);
             break;
         case 5:
             camera_.lookAt(Vec3f(0, 0, 0), Vec3f(0, 1, 0));
             filename = "d.png";
-            destination = Area(TEX_SIZE * 2, TEX_SIZE, TEX_SIZE * 3, TEX_SIZE * 2);
+            destination = Area(textureSize_ * 2, textureSize_, textureSize_ * 3, textureSize_ * 2);
             break;
         }
 
         gl::clear();
         gl::setMatrices(camera_);
-        gl::setViewport(Area(0, 0, TEX_SIZE, TEX_SIZE));
+        gl::setViewport(Area(0, 0, textureSize_, textureSize_));
 
         RenderClouds();
         RenderNebulae();
         RenderStars();
 
-        side_.blitTo(final_, Area(0, 0, TEX_SIZE, TEX_SIZE), destination);
+        side_.blitTo(final_, Area(0, 0, textureSize_, textureSize_), destination);
 
         stringstream fullFilename;
         fullFilename << getAppPath() << "out\\" << filename;
