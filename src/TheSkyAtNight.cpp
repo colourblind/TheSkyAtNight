@@ -16,7 +16,7 @@ using namespace std;
 using namespace cinder;
 using namespace cinder::app;
 
-const int TEX_SIZE = 512;
+const int TEX_SIZE = 1024;
 
 class TheSkyAtNight : public AppBasic
 {
@@ -48,7 +48,7 @@ private:
 
 void TheSkyAtNight::prepareSettings(Settings *settings)
 {
-    settings->setWindowSize(TEX_SIZE, TEX_SIZE);
+    settings->setWindowSize(128, 128);
 }
 
 void TheSkyAtNight::setup()
@@ -88,6 +88,8 @@ void TheSkyAtNight::setup()
     int g = Rand::randInt(0, 2);
     int b = Rand::randInt(0, 2);
     tint_ = ColorA(r, g, b);
+
+    side_.bindFramebuffer();
 
     camera_ = CameraPersp(TEX_SIZE, TEX_SIZE, 90, 0.1f, 20);
     camera_.setWorldUp(Vec3f(0, -1, 0));
@@ -135,25 +137,15 @@ void TheSkyAtNight::draw()
             break;
         }
 
-        side_.bindFramebuffer();
-
         gl::clear();
         gl::setMatrices(camera_);
+        gl::setViewport(Area(0, 0, TEX_SIZE, TEX_SIZE));
 
         RenderClouds();
         RenderNebulae();
         RenderStars();
 
-        side_.unbindFramebuffer();
-
-        // Rendering to screen and then blitting off doesn't work, stretching the last row 
-        // of the texture across the whole area. Half worked with NV 197.16. Got worse with
-        // 266.58. Leaving it here as it's much more elegant (no faffing with the second FBO)
-        // in case I can get the bastard working in the future. :-|
-        // final_.blitFromScreen(Area(0, 0, TEX_SIZE, TEX_SIZE), destination);
-
         side_.blitTo(final_, Area(0, 0, TEX_SIZE, TEX_SIZE), destination);
-        side_.blitToScreen(Area(0, 0, TEX_SIZE, TEX_SIZE), Area(0, 0, TEX_SIZE, TEX_SIZE));
 
         stringstream fullFilename;
         fullFilename << getAppPath() << "out\\" << filename;
