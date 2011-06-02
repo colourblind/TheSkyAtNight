@@ -29,13 +29,15 @@ private:
     void RenderClouds();
 
     void DrawStar(float size);
+    void DrawPoint(int numPoints);
     void DrawBillboard(Vec3f objectPos, Vec2f size, Camera *camera);
 
     gl::Texture smallStarTexture_;
     gl::Texture mediumStarTexture_;
     gl::Texture largeStarTexture_;
     gl::Texture hugeStarTexture_;
-    gl::Texture cloudTexture_;
+    gl::Texture cloudTexture0_;
+    gl::Texture cloudTexture1_;
     gl::Fbo side_;
     gl::Fbo final_;
     Color tint_;
@@ -84,7 +86,8 @@ void TheSkyAtNight::setup()
     mediumStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE0)), format);
     largeStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE1)), format);
     hugeStarTexture_ = gl::Texture(loadImage(loadResource(RES_STAR_TEXTURE1)), format);
-    cloudTexture_ = gl::Texture(loadImage(loadResource(RES_CLOUD_TEXTURE0)), format);
+    cloudTexture0_ = gl::Texture(loadImage(loadResource(RES_CLOUD_TEXTURE0)), format);
+    cloudTexture1_ = gl::Texture(loadImage(loadResource(RES_CLOUD_TEXTURE1)), format);
 
     Rand::randSeed(seed_);
 
@@ -170,24 +173,27 @@ void TheSkyAtNight::RenderStars()
 {
     gl::enableAdditiveBlending();
     smallStarTexture_.enableAndBind();
-    int numSmallStars = Rand::randInt(10000, 100000);
+    int numSmallStars = Rand::randInt(500, 10000);
     for (int i = 0; i < numSmallStars; i ++)
-        DrawStar(0.01f);
+        DrawStar(0.005f);
 
     mediumStarTexture_.enableAndBind();
     int numMediumStars = Rand::randInt(200, 5000);
     for (int i = 0; i < numMediumStars; i ++)
-        DrawStar(0.04f);
+        DrawStar(0.02f);
 
     largeStarTexture_.enableAndBind();
     int numLargeStars = Rand::randInt(20, 200);
     for (int i = 0; i < numLargeStars; i ++)
-        DrawStar(0.08f);
+        DrawStar(0.06f);
 
     hugeStarTexture_.enableAndBind();
     int numHugeStars = Rand::randInt(0, 4);
     for (int i = 0; i < numHugeStars; i ++)
-        DrawStar(0.3f);
+        DrawStar(0.2f);
+
+    hugeStarTexture_.disable();
+    DrawPoint(Rand::randInt(10000, 100000));
 }
 
 void TheSkyAtNight::RenderNebulae()
@@ -195,7 +201,6 @@ void TheSkyAtNight::RenderNebulae()
     Vec3f right, up;
     camera_.getBillboardVectors(&right, &up);
 
-    gl::enableAdditiveBlending();
     int numNebula = Rand::randInt(0, 4);
     for (int i = 0; i < numNebula; i ++)
     {
@@ -212,6 +217,7 @@ void TheSkyAtNight::RenderNebulae()
             float x1 = Rand::randFloat(0, 1);
             float y1 = Rand::randFloat(0, 1);
             float z1 = Rand::randFloat(0, 1);
+            int cloudTexture = Rand::randInt(6);
             x1 = x1 * x1 - 0.5f; // Square the offsets to make them tend towards the centre
             y1 = y1 * y1 - 0.5f;
             z1 = z1 * z1 - 0.5f;
@@ -226,7 +232,18 @@ void TheSkyAtNight::RenderNebulae()
             float g = Rand::randFloat(0, 1);
             float a = Rand::randFloat(0, 1);
 
-            gl::color(ColorA(tint_.r + r, tint_.g + g, tint_.b + b, a));
+            if (cloudTexture == 0)
+            {
+                cloudTexture1_.enableAndBind();
+                gl::enableAlphaBlending();
+                gl::color(Color::white());
+            }
+            else
+            {
+                cloudTexture0_.enableAndBind();
+                gl::enableAdditiveBlending();
+                gl::color(ColorA(tint_.r + r, tint_.g + g, tint_.b + b, a));
+            }
             DrawBillboard(pos + offset, Vec2f(scaleX, scaleY), &camera_); // TODO: rotate
         }
     }
@@ -238,7 +255,7 @@ void TheSkyAtNight::RenderClouds()
     camera_.getBillboardVectors(&right, &up);
 
     gl::enableAdditiveBlending();
-    cloudTexture_.enableAndBind();
+    cloudTexture0_.enableAndBind();
     int numClouds = Rand::randInt(3, 15);
     for (int i = 0; i < numClouds; i ++)
     {
@@ -268,6 +285,33 @@ void TheSkyAtNight::DrawStar(float size)
 
     gl::color(Color(r, g, b));
     DrawBillboard(position, Vec2f(size, size), &camera_);
+}
+
+void TheSkyAtNight::DrawPoint(int numPoints)
+{
+    vector<Vec3f> verts;
+    vector<Vec3f> colours;
+
+    gl::enableAdditiveBlending();
+    for (int i = 0; i < numPoints; i ++)
+    {
+        float x = Rand::randFloat(-5, 5);
+        float y = Rand::randFloat(-5, 5);
+        float z = Rand::randFloat(-5, 5);
+        float colour = Rand::randFloat(0, 0.5f);
+        verts.push_back(Vec3f(x, y, z));
+        colours.push_back(Vec3f(colour, colour, colour));
+    }
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+	glVertexPointer(3, GL_FLOAT, 0, &(verts[0].x));
+    glColorPointer(3, GL_FLOAT, 0, &(colours[0].x));
+
+	glDrawArrays(GL_POINTS, 0, verts.size());
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
 }
 
 void TheSkyAtNight::DrawBillboard(Vec3f objectPos, Vec2f scale, Camera *camera)
